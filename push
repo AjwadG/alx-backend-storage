@@ -1,4 +1,4 @@
-***REMOVED***
+#!/bin/bash
 
 # Prompt user for commit message
 read -p "Enter commit message: " message
