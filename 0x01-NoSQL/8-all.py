@@ -3,5 +3,18 @@
 
 
 def list_all(mongo_collection):
-    """ lists all documents in a collection """
+    """
+    Lists all documents in a collection.
+
+    Parameters
+    ----------
+    mongo_collection : pymongo.collection.Collection
+        MongoDB collection object
+
+    Returns
+    -------
+    cursor
+        A cursor to the documents in the collection
+    """
     return mongo_collection.find({})
+
