@@ -2,9 +2,39 @@
 """
 exercise.py
 """
-from typing import Union, Optional, Callable
+from typing import Union, Optional, Callable, Any
 import redis
 import uuid
+from functools import wraps
+
+
+def count_calls(method: Callable) -> Callable:
+    """
+    Counts the number of times a function is called.
+
+    Parameters:
+        fn: The function to be called.
+
+    Returns:
+        The decorated function.
+    """
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs) -> Any:
+        """
+        Increments the number of times the decorated function is called.
+
+        Parameters:
+            self: The instance of the Cache class.
+            *args: The arguments to be passed to the decorated function.
+
+        Returns:
+            The return value of the decorated function.
+        """
+        if isinstance(self, Cache) and isinstance(self._redis, redis.Redis):
+            self._redis.incr(method.__qualname__)
+        return method(self, *args, **kwargs)
+    return wrapper
 
 
 class Cache:
@@ -24,6 +54,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Saves the data in to the Redis db and returns
@@ -39,7 +70,8 @@ class Cache:
         self._redis.set(key, data)
         return key
 
-    def get(self, key: str, fn: Optional[Callable] = None) -> bytes:
+    def get(self, key: str,
+            fn: Optional[Callable] = None) -> Union[str, bytes, int, float]:
         """
         Retrieves the data associated with the key from the cache
         and returns it.
@@ -74,7 +106,10 @@ class Cache:
             The data associated with the key in the cache as a
             string.
         """
-        return self.get(key).decode("utf-8")
+        value = self.get(key)
+        if value is None:
+            return None
+        return value.decode("utf-8")
 
     def get_int(self, key: str) -> int:
         """
@@ -88,4 +123,7 @@ class Cache:
             The data associated with the key in the cache as an
             integer.
         """
-        return int(self.get(key))
+        value = self.get(key)
+        if value is None:
+            return None
+        return int(value)
