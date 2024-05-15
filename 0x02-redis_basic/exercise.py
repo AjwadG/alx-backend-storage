@@ -27,6 +27,7 @@ def count_calls(method: Callable) -> Callable:
         Parameters:
             self: The instance of the Cache class.
             *args: The arguments to be passed to the decorated function.
+            **kwargs: The keyword arguments to be passed to the decorated
 
         Returns:
             The return value of the decorated function.
@@ -34,6 +35,41 @@ def count_calls(method: Callable) -> Callable:
         if isinstance(self, Cache) and isinstance(self._redis, redis.Redis):
             self._redis.incr(method.__qualname__)
         return method(self, *args, **kwargs)
+    return wrapper
+
+
+def call_history(method: Callable) -> Callable:
+    """
+    Returns the history of calls to the decorated function.
+
+    Parameters:
+        method: The function to be called.
+
+    Returns:
+        The decorated function.
+    """
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs) -> Any:
+        """
+        Returns the history of calls to the decorated function.
+
+        Parameters:
+            self: The instance of the Cache class.
+            *args: The arguments to be passed to the decorated function.
+            **kwargs: The keyword arguments to be passed to the decorated
+
+        Returns:
+            The return value of the decorated function.
+        """
+        input = "{}:inputs".format(method.__qualname__)
+        output = "{}:outputs".format(method.__qualname__)
+        return_value = method(self, *args, **kwargs)
+
+        if isinstance(self, Cache) and isinstance(self._redis, redis.Redis):
+            self._redis.rpush(input, str(args))
+            self._redis.rpush(output, return_value)
+        return return_value
     return wrapper
 
 
@@ -55,6 +91,7 @@ class Cache:
         self._redis.flushdb()
 
     @count_calls
+    @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Saves the data in to the Redis db and returns
