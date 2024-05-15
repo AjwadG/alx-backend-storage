@@ -8,6 +8,23 @@ import uuid
 from functools import wraps
 
 
+def replay(method: Callable) -> None:
+    """
+    Prints the history of calls to the function.
+
+    Parameters:
+        method: The function to print the hostory of.
+    """
+    name = method.__qualname__
+    client = redis.Redis()
+    inputs = client.lrange("{}:inputs".format(name), 0, -1)
+    outputs = client.lrange("{}:outputs".format(name), 0, -1)
+    print('{} was called {} times:'.format(name, len(inputs)))
+    for input, output in zip(inputs, outputs):
+        print("{}(*{}) -> {}".format(name, input.decode("utf-8"),
+                                     output.decode("utf-8")))
+
+
 def count_calls(method: Callable) -> Callable:
     """
     Counts the number of times a function is called.
